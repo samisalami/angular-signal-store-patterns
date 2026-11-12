@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal Stores: today and proposed</title>
+<style>
+  :root {
+    --paper: #f7f5f0;
+    --ink: #1d1c1a;
+    --muted: #6b6860;
+    --line: #dcd8ce;
+    --card: #ffffff;
+    --before: #b0492b;
+    --before-soft: #f6e4dc;
+    --after: #1c7458;
+    --after-soft: #dcefe7;
+    --option: #3a55b4;
+    --option-soft: #e2e7f7;
+    --code-bg: #1f2228;
+    --code-ink: #d7dae0;
+    --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --mono: "Cascadia Code", "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: #e9e6df; color: var(--ink); font-family: var(--sans); overflow: hidden; }
+
+  /* Every slide is designed at 1280 x 720 and scaled to fit the window. */
+  .stage { position: fixed; inset: 0; }
+  .deck { width: 1280px; height: 720px; position: absolute; left: 50%; top: 50%; margin: -360px 0 0 -640px; transform-origin: center center; }
+  .slide {
+    position: absolute; inset: 0; background: var(--paper); padding: 54px 64px 62px;
+    display: none; flex-direction: column; overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .14);
+  }
+  .slide.is-active { display: flex; }
+
+  h1, h2, h3, p { margin: 0; }
+  h1 { font-size: 58px; line-height: 1.08; letter-spacing: -.02em; font-weight: 650; }
+  h2 { font-size: 36px; line-height: 1.15; letter-spacing: -.015em; font-weight: 650; }
+  h3 { font-size: 20px; font-weight: 650; }
+  p, li, td, th { font-size: 20px; line-height: 1.4; }
+  .lede { font-size: 24px; color: var(--muted); margin-top: 14px; max-width: 980px; }
+  .kicker { font-size: 15px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .kicker.before { color: var(--before); }
+  .kicker.after { color: var(--after); }
+  .kicker.option { color: var(--option); }
+  code { font-family: var(--mono); font-size: .9em; background: rgba(0, 0, 0, .06); padding: 1px 6px; border-radius: 4px; }
+  .body { flex: 1; min-height: 0; margin-top: 26px; display: flex; flex-direction: column; gap: 18px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; flex: 1; min-height: 0; }
+  .cols.wide-left { grid-template-columns: 1.25fr 1fr; }
+  .cols.wide-right { grid-template-columns: 1fr 1.25fr; }
+  .stack { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  ul { margin: 0; padding-left: 22px; }
+  li { margin-bottom: 8px; }
+  li:last-child { margin-bottom: 0; }
+
+  /* title and section slides */
+  .slide.title { justify-content: center; padding-left: 96px; }
+  .slide.title .lede { font-size: 27px; }
+  .slide.section { justify-content: center; padding-left: 96px; }
+  .slide.section .number { font-size: 120px; font-weight: 700; line-height: 1; color: var(--line); margin-bottom: 8px; }
+  .tags { display: flex; gap: 10px; margin-top: 34px; }
+  .tag { font-size: 16px; font-weight: 600; padding: 6px 14px; border-radius: 999px; }
+  .tag.before { background: var(--before-soft); color: var(--before); }
+  .tag.after { background: var(--after-soft); color: var(--after); }
+  .tag.option { background: var(--option-soft); color: var(--option); }
+
+  /* cards */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 22px 24px; }
+  .card h3 { margin-bottom: 8px; }
+  .card p { font-size: 18px; color: #3a3833; }
+  .card.before { border-top: 5px solid var(--before); }
+  .card.after { border-top: 5px solid var(--after); }
+  .card.option { border-top: 5px solid var(--option); }
+  .note { background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--ink); border-radius: 8px; padding: 14px 20px; }
+  .note.after { border-left-color: var(--after); }
+  .note.before { border-left-color: var(--before); }
+  .note.option { border-left-color: var(--option); }
+  .note p { font-size: 19px; }
+
+  /* code panels */
+  .panel { display: flex; flex-direction: column; min-height: 0; border-radius: 10px; overflow: hidden; background: var(--code-bg); }
+  .panel-head { font-size: 14px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; padding: 8px 16px; color: #fff; display: flex; justify-content: space-between; gap: 12px; }
+  .panel-head span:last-child { font-weight: 500; letter-spacing: 0; text-transform: none; opacity: .85; font-family: var(--mono); font-size: 13px; }
+  .panel.before .panel-head { background: var(--before); }
+  .panel.after .panel-head { background: var(--after); }
+  .panel.option .panel-head { background: var(--option); }
+  pre { margin: 0; padding: 10px 0; font-family: var(--mono); font-size: 13.5px; line-height: 1.4; color: var(--code-ink); overflow: hidden; flex: 1; }
+  pre code { background: none; padding: 0; font-size: inherit; display: block; }
+  .ln { display: block; padding: 0 16px; white-space: pre; border-left: 4px solid transparent; }
+  .ln.bad { background: rgba(214, 96, 62, .2); border-left-color: #e0714d; }
+  .ln.good { background: rgba(60, 170, 130, .18); border-left-color: #46b48c; }
+  .tok-c { color: #8a909c; font-style: italic; }
+  .tok-s { color: #b9d18a; }
+  .tok-k { color: #d59be0; }
+  .tok-t { color: #7fc4e8; }
+  .tok-n { color: #e3b46c; }
+
+  /* tables */
+  table { border-collapse: collapse; width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  th, td { text-align: left; padding: 10px 16px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 18px; }
+  th { font-size: 14px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); background: #f0ede6; }
+  tr:last-child td { border-bottom: 0; }
+  th.before { color: var(--before); }
+  th.after { color: var(--after); }
+  td.yes { color: var(--after); font-weight: 650; }
+  td.no { color: var(--before); font-weight: 650; }
+  td.dim { color: var(--muted); }
+
+  /* numbered steps */
+  .steps { display: grid; gap: 12px; }
+  .step { display: grid; grid-template-columns: 44px 1fr; gap: 16px; align-items: start; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; }
+  .step b.num { width: 44px; height: 44px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 19px; }
+  .step h3 { margin-bottom: 2px; }
+  .step p { font-size: 18px; color: #3a3833; }
+
+  /* footer and navigation */
+  pre, code { font-variant-ligatures: none; }
+  .foot { position: absolute; left: 64px; right: 150px; bottom: 20px; display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); }
+  .progress { position: fixed; left: 0; top: 0; height: 4px; background: var(--ink); transition: width .2s; z-index: 5; }
+  .nav { position: fixed; right: 18px; bottom: 16px; display: flex; gap: 8px; z-index: 5; }
+  .nav button { font: inherit; font-size: 18px; width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+  .nav button:hover { background: #f0ede6; }
+
+  @media print {
+    @page { size: 1280px 720px; margin: 0; }
+    body { overflow: visible; background: #fff; }
+    .stage { position: static; display: block; }
+    .deck { transform: none !important; position: static; margin: 0; width: auto; height: auto; }
+    .slide { display: flex !important; position: relative; width: 1280px; height: 720px; box-shadow: none; page-break-after: always; }
+    .progress, .nav { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="stage"><div class="deck" id="deck">
+
+<!-- 1 -->
+<section class="slide title" data-section="Intro">
+  <p class="kicker">NgRx Signal Stores</p>
+  <h1>Where does the code<br>around your stores go?</h1>
+  <p class="lede">How it is often organised today, and a proposal for three clear layers: domain functions, stores, and the way from store to view.</p>
+  <div class="tags"><span class="tag before">Today</span><span class="tag after">Proposed</span><span class="tag option">Optional</span></div>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-section="Intro">
+  <p class="kicker before">Today</p>
+  <h2>Three kinds of code share the same places</h2>
+  <div class="body">
+    <div class="cards">
+      <div class="card before">
+        <h3>1 · Rules live in helpers</h3>
+        <p>Types sit in interface and model files. What those types can do is spread over helper files, alongside string and array utilities.</p>
+      </div>
+      <div class="card before">
+        <h3>2 · Stores do three jobs</h3>
+        <p>Inside <code>withMethods</code> you change state, write domain rules, and build objects that one particular view needs.</p>
+      </div>
+      <div class="card before">
+        <h3>3 · Components wrap the store</h3>
+        <p>Components inject stores and wrap store methods in event handlers. Each component with the same button writes its own wrapper.</p>
+      </div>
+    </div>
+    <div class="note before">
+      <p><b>The common cause:</b> there is no agreed place for each kind of code. So "where does this go?" is answered per developer, per file.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="slide" data-section="Intro">
+  <p class="kicker after">Proposed</p>
+  <h2>Three layers, and arrows that point one way</h2>
+  <div class="body">
+    <svg viewBox="0 0 1150 250" width="1150" height="250" role="img" aria-label="View side calls the store and domain functions; the store calls domain functions and the API">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#1d1c1a"/>
+        </marker>
+      </defs>
+      <rect x="2" y="20" width="560" height="210" rx="12" fill="#fff" stroke="#dcd8ce"/>
+      <text x="542" y="62" font-size="15" font-weight="650" fill="#6b6860" letter-spacing="1.2" text-anchor="end">VIEW SIDE</text>
+      <rect x="22" y="70" width="140" height="64" rx="8" fill="#f0ede6" stroke="#dcd8ce"/>
+      <text x="92" y="109" font-size="19" text-anchor="middle" fill="#1d1c1a">Page</text>
+      <rect x="212" y="70" width="150" height="64" rx="8" fill="#f0ede6" stroke="#dcd8ce"/>
+      <text x="287" y="109" font-size="19" text-anchor="middle" fill="#1d1c1a">Component</text>
+      <rect x="392" y="150" width="150" height="64" rx="8" fill="#dcefe7" stroke="#1c7458"/>
+      <text x="467" y="178" font-size="18" text-anchor="middle" fill="#1d1c1a">Inject</text>
+      <text x="467" y="200" font-size="18" text-anchor="middle" fill="#1d1c1a">functions</text>
+      <line x1="162" y1="102" x2="208" y2="102" stroke="#1d1c1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <text x="185" y="92" font-size="12" text-anchor="middle" fill="#6b6860">entity</text>
+      <path d="M287 134 L287 182 L388 182" fill="none" stroke="#1d1c1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <rect x="660" y="60" width="190" height="84" rx="8" fill="#dcefe7" stroke="#1c7458"/>
+      <text x="755" y="97" font-size="20" font-weight="650" text-anchor="middle" fill="#1d1c1a">Store</text>
+      <text x="755" y="121" font-size="15" text-anchor="middle" fill="#3a3833">state + features</text>
+      <rect x="950" y="60" width="190" height="84" rx="8" fill="#dcefe7" stroke="#1c7458"/>
+      <text x="1045" y="97" font-size="20" font-weight="650" text-anchor="middle" fill="#1d1c1a">Domain functions</text>
+      <text x="1045" y="121" font-size="15" text-anchor="middle" fill="#3a3833">the rules</text>
+      <rect x="660" y="176" width="190" height="52" rx="8" fill="#f0ede6" stroke="#dcd8ce"/>
+      <text x="755" y="208" font-size="18" text-anchor="middle" fill="#1d1c1a">API service</text>
+      <path d="M92 70 L92 36 L755 36 L755 56" fill="none" stroke="#1d1c1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="542" y1="170" x2="656" y2="124" stroke="#1d1c1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="850" y1="102" x2="946" y2="102" stroke="#1d1c1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="755" y1="144" x2="755" y2="172" stroke="#1d1c1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <path d="M542 200 L600 200 L600 242 L1045 242 L1045 148" fill="none" stroke="#1d1c1a" stroke-width="2" marker-end="url(#arrow)"/>
+    </svg>
+    <div class="cards">
+      <div class="card after"><h3>Domain functions</h3><p>The rules about your data. Plain TypeScript, next to the type.</p></div>
+      <div class="card after"><h3>Store</h3><p>The state, and the only place that changes it or talks to the server.</p></div>
+      <div class="card after"><h3>Inject functions</h3><p>What several views share: who is looking, where to navigate.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="slide section" data-section="1 · Domain functions">
+  <div class="number">1</div>
+  <h1>Domain functions</h1>
+  <p class="lede">From types plus helpers to types that carry their own rules.</p>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-section="1 · Domain functions">
+  <p class="kicker before">Today</p>
+  <h2>The type is in one file, its rules are "helpers"</h2>
+  <div class="body">
+    <div class="cols wide-left">
+      <div class="panel before">
+        <div class="panel-head"><span>Today</span><span>illustrative</span></div>
+<script type="text/plain" data-code>
+// post.interface.ts
+export interface Post {
+  id: string;
+  authorId: string;
+  publishedAt: string | null;
+  likedBy: string[];
+}
+
+// post.helpers.ts //!
+export function isPostDraft(post: Post): boolean { //!
+  return post.publishedAt === null;
+}
+
+export function canUserEditPost(post: Post, user: User) { //!
+  return post.authorId === user.id || user.role === 'admin';
+}
+
+// string.helpers.ts //!
+export function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+</script>
+      </div>
+      <div class="stack">
+        <div class="card before">
+          <h3>"Helper" means two things</h3>
+          <p><code>capitalize</code> knows nothing about your domain. <code>canUserEditPost</code> is a business rule. Both carry the same label.</p>
+        </div>
+        <div class="card before">
+          <h3>Rules are found by searching</h3>
+          <p>Nothing connects <code>Post</code> to what a post can do. You have to know the helper exists.</p>
+        </div>
+        <div class="card before">
+          <h3>The rest sits in stores</h3>
+          <p>Rules that never became a helper are written inline in a store method, where nothing else can reuse them.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>1 · Domain functions</span></div>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-section="1 · Domain functions">
+  <p class="kicker after">Proposed</p>
+  <h2>The type and its rules share one name</h2>
+  <div class="body">
+    <div class="cols wide-left">
+      <div class="panel after">
+        <div class="panel-head"><span>Proposed</span><span>post.ts</span></div>
+<script type="text/plain" data-code>
+export type Post = {
+  id: string;
+  authorId: string;
+  publishedAt: string | null;
+  likedBy: string[];
+};
+
+export const Post = { //+
+  isDraft(post: Post): boolean { //+
+    return post.publishedAt === null;
+  },
+
+  isEditableBy(post: Post, user: User): boolean { //+
+    return post.authorId === user.id || User.isAdmin(user);
+  },
+
+  toggleLike(post: Post, user: User): Post { //+
+    const likedBy = Post.isLikedBy(post, user)
+      ? post.likedBy.filter((likerId) => likerId !== user.id)
+      : [...post.likedBy, user.id];
+    return { ...post, likedBy };
+  },
+};
+</script>
+      </div>
+      <div class="stack">
+        <div class="card after">
+          <h3>One import, type and rules</h3>
+          <p><code>Post.</code> plus autocomplete lists everything a post can do. The data stays a plain object.</p>
+        </div>
+        <div class="card after">
+          <h3>Still plain TypeScript</h3>
+          <p>No Angular, no NgRx, no DI. Tests need no <code>TestBed</code> and no mocks.</p>
+        </div>
+        <div class="card after">
+          <h3>"Helper" gets its meaning back</h3>
+          <p>Helpers are only what knows nothing about your domain: strings, arrays, dates.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>1 · Domain functions</span></div>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-section="1 · Domain functions">
+  <p class="kicker after">Proposed</p>
+  <h2>Who calls domain functions</h2>
+  <div class="body">
+    <div class="cols">
+      <div class="stack">
+        <div class="card after">
+          <h3>Queries answer a question</h3>
+          <p><code>Post.isDraft(post)</code>, <code>Post.isEditableBy(post, user)</code>. Safe to call from every layer.</p>
+        </div>
+        <div class="card after">
+          <h3>Updates return the changed object</h3>
+          <p><code>Post.toggleLike(post, user)</code>. Only a store calls these, because only a store can save the result.</p>
+        </div>
+        <div class="note after">
+          <p>The domain function decides <b>what</b> the new post is. The store decides <b>that</b> it is saved.</p>
+        </div>
+      </div>
+      <table>
+        <tr><th>Caller</th><th>Queries</th><th>Updates</th></tr>
+        <tr><td>Store computed</td><td class="yes">yes</td><td class="dim">no</td></tr>
+        <tr><td>Store method</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+        <tr><td>Inject function</td><td class="yes">yes</td><td class="no">no</td></tr>
+        <tr><td>Component</td><td>only in a <code>computed</code> that this one view needs</td><td class="no">no</td></tr>
+        <tr><td>Test</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="foot"><span>1 · Domain functions</span></div>
+</section>
+
+<!-- 8 -->
+<section class="slide section" data-section="2 · Stores">
+  <div class="number">2</div>
+  <h1>Stores</h1>
+  <p class="lede">From stores that do three jobs to stores that only hold and change state.</p>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-section="2 · Stores">
+  <p class="kicker before">Today</p>
+  <h2>One <code>withMethods</code> block, three kinds of code</h2>
+  <div class="body">
+    <div class="cols wide-left">
+      <div class="panel before">
+        <div class="panel-head"><span>Today</span><span>illustrative</span></div>
+<script type="text/plain" data-code>
+withMethods((store, api = inject(PostsApi),
+             session = inject(SessionStore)) => ({
+  async loadAll() { /* state change */ },
+
+  // a view object, built in the store //!
+  getPostCard(postId: string): PostCardView { //!
+    const post = store.entityMap()[postId];
+    const user = session.currentUser();
+    return {
+      title: post.title,
+      statusLabel: post.publishedAt === null //!
+        ? 'Draft' : 'Published',
+      // a domain rule, written inline //!
+      showEdit: !!user && (post.authorId === user.id //!
+        || user.role === 'admin'), //!
+    };
+  },
+
+  async toggleLike(postId: string) {
+    const user = session.currentUser(); //!
+    /* rule + state change + server call */
+  },
+})),
+</script>
+      </div>
+      <div class="stack">
+        <div class="card before">
+          <h3>View objects in the store</h3>
+          <p><code>getPostCard</code> exists for one component. Every new screen adds another one, and the store grows with the UI.</p>
+        </div>
+        <div class="card before">
+          <h3>Rules written inline</h3>
+          <p>"Who may edit" and "what is a draft" are only reachable through this store.</p>
+        </div>
+        <div class="card before">
+          <h3>The store knows who is looking</h3>
+          <p>It reads the session itself, so it can't be used or tested without one.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>2 · Stores</span></div>
+</section>
+
+<!-- 10 -->
+<section class="slide" data-section="2 · Stores">
+  <p class="kicker after">Proposed</p>
+  <h2>The store composes features and nothing else</h2>
+  <div class="body">
+    <div class="cols">
+      <div class="panel after">
+        <div class="panel-head"><span>Proposed</span><span>posts.store.ts</span></div>
+<script type="text/plain" data-code>
+export const PostsStore = signalStore(
+  { providedIn: 'root' },
+  withEntities<Post>(),
+  withPostLoading(), //+
+  withPostLikes(), //+
+  withComputed(({ entities }) => ({
+    publishedPosts: computed(() =>
+      entities().filter((post) => !Post.isDraft(post))),
+    drafts: computed(() =>
+      entities().filter((post) => Post.isDraft(post))),
+  })),
+  withHooks({
+    onInit(store) {
+      void store.loadAll();
+    },
+  }),
+);
+</script>
+      </div>
+      <div class="panel after">
+        <div class="panel-head"><span>Proposed</span><span>with-post-likes.ts</span></div>
+<script type="text/plain" data-code>
+export function withPostLikes() {
+  return signalStoreFeature(
+    { state: type<EntityState<Post>>() },
+    withMethods((store, api = inject(PostsApi)) => ({
+      async toggleLike(postId: string, user: User) { //+
+        const previous = store.entityMap()[postId];
+        const toggled = Post.toggleLike(previous, user); //+
+        patchState(store, setEntity(toggled));
+        try {
+          await firstValueFrom(
+            api.updateLikes(postId, toggled.likedBy));
+        } catch {
+          patchState(store, setEntity(previous));
+        }
+      },
+    })),
+  );
+}
+</script>
+      </div>
+    </div>
+    <div class="note after">
+      <p>One feature per concern. The rule comes from <code>Post.toggleLike</code>, and the user is an argument, so the store no longer reads the session.</p>
+    </div>
+  </div>
+  <div class="foot"><span>2 · Stores</span></div>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-section="2 · Stores">
+  <p class="kicker after">Proposed</p>
+  <h2>What is left on the store</h2>
+  <div class="body">
+    <div class="cols wide-right">
+      <div class="stack">
+        <div class="card after">
+          <h3>Methods change state or call the server</h3>
+          <p>Nothing else. Named for what happens to posts: <code>loadAll</code>, <code>toggleLike</code>, later <code>createPost</code>, <code>publish</code>.</p>
+        </div>
+        <div class="card after">
+          <h3>The actor is an argument</h3>
+          <p><code>toggleLike(postId, user)</code>. The store doesn't look up who is signed in.</p>
+        </div>
+        <div class="card after">
+          <h3>Computeds take no parameters</h3>
+          <p><code>drafts()</code> is a fact about the state. "Is this post liked by that user" is not, so it leaves the store.</p>
+        </div>
+      </div>
+      <div class="stack">
+        <table>
+          <tr><th>Member</th><th>Kind</th></tr>
+          <tr><td><code>entities</code>, <code>entityMap</code></td><td>state</td></tr>
+          <tr><td><code>isPending</code>, <code>isFulfilled</code>, <code>error</code></td><td>computed</td></tr>
+          <tr><td><code>publishedPosts</code>, <code>drafts</code></td><td>computed</td></tr>
+          <tr><td><code>loadAll()</code></td><td><b>method</b></td></tr>
+          <tr><td><code>toggleLike(postId, user)</code></td><td><b>method</b></td></tr>
+        </table>
+        <table>
+          <tr><th class="before">Was in the store</th><th class="after">Goes to</th></tr>
+          <tr><td>"who may edit", "what is a draft"</td><td>domain functions</td></tr>
+          <tr><td><code>getPostCard(postId)</code></td><td>the view side (chapter 3)</td></tr>
+          <tr><td>reading the session</td><td>an argument</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>2 · Stores</span></div>
+</section>
+
+<!-- 12 -->
+<section class="slide section" data-section="3 · From store to view">
+  <div class="number">3</div>
+  <h1>From store to view</h1>
+  <p class="lede">From components that wrap store methods to shared inject functions.</p>
+</section>
+
+<!-- 13 -->
+<section class="slide" data-section="3 · From store to view">
+  <p class="kicker before">Today</p>
+  <h2>Each component wraps the store itself</h2>
+  <div class="body">
+    <div class="cols wide-left">
+      <div class="panel before">
+        <div class="panel-head"><span>Today</span><span>illustrative</span></div>
+<script type="text/plain" data-code>
+export class PostCardComponent {
+  readonly postId = input.required<string>();
+
+  private readonly postsStore = inject(PostsStore); //!
+  private readonly sessionStore = inject(SessionStore); //!
+  private readonly router = inject(Router); //!
+
+  protected readonly card = computed(() =>
+    this.postsStore.getPostCard(this.postId()));
+
+  protected onLikeClicked(): void { //!
+    if (!this.sessionStore.currentUser()) { //!
+      void this.router.navigate(['/sign-in']); //!
+      return; //!
+    } //!
+    void this.postsStore.toggleLike(this.postId()); //!
+  } //!
+
+  protected onEditClicked(): void {
+    void this.router.navigate(['/posts', this.postId(), 'edit']);
+  }
+}
+</script>
+      </div>
+      <div class="stack">
+        <div class="card before">
+          <h3>The wrapper is written per component</h3>
+          <p>The feed row and the detail page have a like button too. Each one needs the same handler, including the sign-in check.</p>
+        </div>
+        <div class="card before">
+          <h3>Components know the wiring</h3>
+          <p>Two stores and the router, just to show a card.</p>
+        </div>
+        <div class="card before">
+          <h3>Everything goes through ids</h3>
+          <p>The component gets an id and asks the store again for what its parent already had.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>3 · From store to view</span></div>
+</section>
+
+<!-- 14 -->
+<section class="slide" data-section="3 · From store to view">
+  <p class="kicker after">Proposed</p>
+  <h2>Shared view logic moves into inject functions</h2>
+  <div class="body">
+    <div class="cols wide-left">
+      <div class="panel after">
+        <div class="panel-head"><span>Proposed</span><span>inject-post-like.ts</span></div>
+<script type="text/plain" data-code>
+export function injectPostLike(post: Signal<Post>) { //+
+  const postsStore = inject(PostsStore);
+  const sessionStore = inject(SessionStore);
+  const router = inject(Router);
+
+  const isLiked = computed(() => {
+    const viewer = sessionStore.currentUser();
+    return viewer !== null && Post.isLikedBy(post(), viewer);
+  });
+
+  return {
+    isLiked,
+    toggleLike(): void {
+      const viewer = sessionStore.currentUser();
+      if (viewer === null) {
+        void router.navigate(['/sign-in']);
+        return;
+      }
+      void postsStore.toggleLike(post().id, viewer);
+    },
+  };
+}
+</script>
+      </div>
+      <div class="stack">
+        <div class="panel after">
+          <div class="panel-head"><span>Proposed</span><span>post-card.component.ts</span></div>
+<script type="text/plain" data-code>
+export class PostCardComponent {
+  readonly post = input.required<Post>();
+
+  protected readonly like = //+
+    injectPostLike(this.post); //+
+  protected readonly permissions = //+
+    injectPostPermissions(this.post); //+
+}
+</script>
+        </div>
+        <div class="note after">
+          <p>Angular's version of a Vue composable or a React hook. It holds no rule and no state. It adds <b>context</b>: "the user is whoever is signed in".</p>
+        </div>
+        <div class="note after">
+          <p>The card injects no store and no router.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>3 · From store to view</span></div>
+</section>
+
+<!-- 15 -->
+<section class="slide" data-section="3 · From store to view">
+  <p class="kicker after">Proposed</p>
+  <h2>One inject function per concern, not per view</h2>
+  <div class="body">
+    <div class="cols">
+      <div class="stack">
+        <table>
+          <tr><th>View</th><th>Like</th><th>Permissions</th></tr>
+          <tr><td>Post card</td><td class="yes">uses</td><td class="yes">uses</td></tr>
+          <tr><td>Feed row</td><td class="yes">uses</td><td class="dim">–</td></tr>
+          <tr><td>Moderation row</td><td class="dim">–</td><td class="yes">uses</td></tr>
+        </table>
+        <div class="note after">
+          <p>Three views, two inject functions. A new view combines what exists. The count grows with the concerns in your domain, not with your screens.</p>
+        </div>
+        <div class="note before">
+          <p>To avoid: <code>injectPostCardViewModel()</code>. That only moves the component's code into a second file.</p>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step"><b class="num">1</b><div><h3>Pages read the store directly</h3><p><code>postsStore.publishedPosts()</code>, <code>isPending()</code>, <code>loadAll()</code>. Nothing in between.</p></div></div>
+        <div class="step"><b class="num">2</b><div><h3>Pass the entity, not its id</h3><p>The page has the post. Children get it as an input and never look it up again.</p></div></div>
+        <div class="step"><b class="num">3</b><div><h3>Components take concerns</h3><p>What several views share comes from an inject function.</p></div></div>
+        <div class="step"><b class="num">4</b><div><h3>The rest stays in the component</h3><p>Logic only one view needs is extracted when a second view needs it, not before.</p></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>3 · From store to view</span></div>
+</section>
+
+<!-- 16 -->
+<section class="slide" data-section="3 · From store to view">
+  <p class="kicker after">Proposed</p>
+  <h2>One click on ♥, traced through the layers</h2>
+  <div class="body">
+    <div class="steps">
+      <div class="step"><b class="num">1</b><div><h3>Template</h3><p>The card calls <code>like.toggleLike()</code>.</p></div></div>
+      <div class="step"><b class="num">2</b><div><h3>Inject function</h3><p>Reads who is signed in and calls <code>postsStore.toggleLike(post().id, viewer)</code>.</p></div></div>
+      <div class="step"><b class="num">3</b><div><h3>Store method + domain function</h3><p><code>Post.toggleLike(post, viewer)</code> returns the new post. The store saves it, tells the server, and puts the old post back if the server rejects it.</p></div></div>
+      <div class="step"><b class="num">4</b><div><h3>Signals bring it back</h3><p>The state changed, so <code>publishedPosts</code> recomputes, the page hands the card a new post, <code>like.isLiked</code> recomputes, and the button re-renders.</p></div></div>
+    </div>
+    <div class="note after">
+      <p>Steps 1 and 2 change no state. Step 3 doesn't know a button exists.</p>
+    </div>
+  </div>
+  <div class="foot"><span>3 · From store to view</span></div>
+</section>
+
+<!-- 17 -->
+<section class="slide" data-section="Keeping it consistent">
+  <p class="kicker after">Proposed</p>
+  <h2>Four questions decide where code goes</h2>
+  <div class="body">
+    <table>
+      <tr><th style="width:44px">#</th><th>Ask in order. The first "yes" decides.</th><th>Then it is a…</th></tr>
+      <tr><td>1</td><td>Can it be written with only its arguments, importing nothing from Angular or NgRx?</td><td><b>domain function</b></td></tr>
+      <tr><td>2</td><td>Does it change state or talk to the server?</td><td><b>store method</b></td></tr>
+      <tr><td>3</td><td>Is it derived from one store's state alone, with no parameter?</td><td><b>store computed</b></td></tr>
+      <tr><td>4</td><td>Everything else: it needs a parameter, a second store, or the router.</td><td><b>view side</b>: in the component if one view needs it, an inject function from the second view on</td></tr>
+    </table>
+    <div class="cols">
+      <div class="card after">
+        <h3>Names you can check in review</h3>
+        <p>Store methods never contain a view word (<code>Viewer</code>, <code>Selected</code>, <code>ForCard</code>). Inject functions are named after a concern, never after a component.</p>
+      </div>
+      <div class="card after">
+        <h3>Lint enforces the imports</h3>
+        <p>Domain files can't import Angular. Stores can't import the router. Components and inject functions can't import <code>patchState</code> or API services.</p>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Keeping it consistent</span></div>
+</section>
+
+<!-- 18 -->
+<section class="slide" data-section="Optional · Events">
+  <p class="kicker option">Optional, if you need it</p>
+  <h2>Events: when methods stop being enough</h2>
+  <div class="body">
+    <div class="cols">
+      <div class="stack">
+        <div class="card option">
+          <h3>The situation it solves</h3>
+          <p>Several stores or components must react to the same thing. With methods, the sender has to know and call all of them.</p>
+        </div>
+        <table>
+          <tr><th colspan="2">One rejected like, three reactions</th></tr>
+          <tr><td><code>PostsStore</code></td><td>takes the like back</td></tr>
+          <tr><td><code>NotificationsStore</code></td><td>adds a message</td></tr>
+          <tr><td>the like button that was clicked</td><td>shows a hint</td></tr>
+        </table>
+        <div class="note option">
+          <p>None of the three knows the others. A fourth reaction is one more <code>on(…)</code>. Nothing that dispatches changes.</p>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="panel option">
+          <div class="panel-head"><span>Optional</span><span>@ngrx/signals/events</span></div>
+<script type="text/plain" data-code>
+// the view announces what happened
+dispatch.likeToggled({ postId, user });
+
+// the store decides how to react
+withReducer(
+  on(postsViewEvents.likeToggled,
+     postsApiEvents.likeRejected,
+     ({ payload }, state) => setEntity(
+       Post.toggleLike(state.entityMap[payload.postId],
+                       payload.user))),
+),
+</script>
+        </div>
+        <div class="card option">
+          <h3>What it costs</h3>
+          <p>More code per action, RxJS instead of <code>async</code>/<code>await</code>, and nothing for the caller to await. Methods stay the default. It's a decision per store.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Optional · Events</span></div>
+</section>
+
+<!-- 19 -->
+<section class="slide" data-section="Summary">
+  <p class="kicker">Summary</p>
+  <h2>Today and proposed, side by side</h2>
+  <div class="body">
+    <table>
+      <tr><th style="width:190px"></th><th class="before">Today</th><th class="after">Proposed</th></tr>
+      <tr><td><b>Rules about your data</b></td><td>Helper functions, apart from the type. Some inline in stores.</td><td>Domain functions next to the type: <code>Post.isEditableBy(post, user)</code></td></tr>
+      <tr><td><b>"Helper"</b></td><td>Anything that isn't a component or a store</td><td>Only code that knows nothing about your domain</td></tr>
+      <tr><td><b>Stores</b></td><td>State changes, domain rules and view objects in one <code>withMethods</code></td><td>State and a few methods, composed from features</td></tr>
+      <tr><td><b>View objects</b></td><td>Built inside the store, one per screen</td><td>Built on the view side, from the entity</td></tr>
+      <tr><td><b>Components</b></td><td>Inject stores and wrap their methods, each on its own</td><td>Get the entity as input and take shared concerns from inject functions</td></tr>
+      <tr><td><b>"Where does it go?"</b></td><td>Decided per developer</td><td>Four questions, naming rules, lint</td></tr>
+    </table>
+  </div>
+  <div class="foot"><span>Summary</span></div>
+</section>
+
+<!-- 20 -->
+<section class="slide" data-section="Next steps">
+  <p class="kicker">Next steps</p>
+  <h2>A possible way there, without a big rewrite</h2>
+  <div class="body">
+    <div class="steps">
+      <div class="step"><b class="num">1</b><div><h3>Agree on the four questions and the names</h3><p>This is the actual decision. Everything else follows from it.</p></div></div>
+      <div class="step"><b class="num">2</b><div><h3>New code follows the layers</h3><p>Turn the lint rules on for new files first.</p></div></div>
+      <div class="step"><b class="num">3</b><div><h3>Migrate what you touch</h3><p>Domain helpers become functions on the type, which is mostly a rename. View objects leave a store when its screen is worked on. A wrapper becomes an inject function when a second view needs it.</p></div></div>
+      <div class="step"><b class="num">4</b><div><h3>Decide on events per store, when the need shows up</h3><p>Not up front.</p></div></div>
+    </div>
+    <div class="note">
+      <p>Every option shown here, including the ones advised against, is real code that compiles and is tested: <code>github.com/samisalami/angular-signal-store-patterns</code></p>
+    </div>
+  </div>
+  <div class="foot"><span>Next steps</span></div>
+</section>
+
+</div></div>
+<div class="nav"><button id="prev" aria-label="Previous slide">‹</button><button id="next" aria-label="Next slide">›</button></div>
+
+<script>
+  // --- code blocks: plain text in, highlighted lines out ---
+  const KEYWORDS = 'import|export|from|const|type|interface|function|return|if|else|async|await|new|class|readonly|private|protected|void|null|true|false|this|string|boolean|try|catch';
+  const TOKEN = new RegExp(
+    '(\\/\\/.*$|\\/\\*.*?\\*\\/)' +                       // comment
+    "|('(?:[^'\\\\]|\\\\.)*'|\"(?:[^\"\\\\]|\\\\.)*\")" + // string
+    '|\\b(' + KEYWORDS + ')\\b' +                         // keyword
+    '|\\b([A-Z][A-Za-z0-9]*)\\b' +                        // type-like name
+    '|\\b(\\d[\\d_]*)\\b',                                // number
+    'g');
+  const escapeHtml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  function highlightLine(line) {
+    let html = '';
+    let lastIndex = 0;
+    for (const match of line.matchAll(TOKEN)) {
+      html += escapeHtml(line.slice(lastIndex, match.index));
+      const tokenClass = match[1] ? 'tok-c' : match[2] ? 'tok-s' : match[3] ? 'tok-k' : match[4] ? 'tok-t' : 'tok-n';
+      html += '<span class="' + tokenClass + '">' + escapeHtml(match[0]) + '</span>';
+      lastIndex = match.index + match[0].length;
+    }
+    return html + escapeHtml(line.slice(lastIndex));
+  }
+
+  for (const source of document.querySelectorAll('script[data-code]')) {
+    const lines = source.textContent.replace(/^\n/, '').replace(/\n\s*$/, '').split('\n');
+    const html = lines.map((rawLine) => {
+      // a trailing //! marks a problem line, a trailing //+ marks an improved line
+      const marker = rawLine.match(/\s*\/\/([!+])\s*$/);
+      const line = marker ? rawLine.slice(0, marker.index) : rawLine;
+      const lineClass = marker ? (marker[1] === '!' ? ' bad' : ' good') : '';
+      return '<span class="ln' + lineClass + '">' + (highlightLine(line) || ' ') + '</span>';
+    }).join('');
+    const pre = document.createElement('pre');
+    pre.innerHTML = '<code>' + html + '</code>';
+    source.replaceWith(pre);
+  }
+
+  // --- deck: scale to the window, navigate with keys, buttons and the URL hash ---
+  const deck = document.getElementById('deck');
+  const slides = [...document.querySelectorAll('.slide')];
+  const progress = document.getElementById('progress');
+  let current = 0;
+
+  slides.forEach((slide, index) => {
+    const foot = slide.querySelector('.foot');
+    if (foot) {
+      foot.insertAdjacentHTML('beforeend', '<span>' + (index + 1) + ' / ' + slides.length + '</span>');
+    }
+  });
+
+  function show(index) {
+    current = Math.max(0, Math.min(slides.length - 1, index));
+    slides.forEach((slide, slideIndex) => slide.classList.toggle('is-active', slideIndex === current));
+    progress.style.width = ((current + 1) / slides.length) * 100 + '%';
+    history.replaceState(null, '', '#' + (current + 1));
+  }
+
+  function fit() {
+    const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    deck.style.transform = 'scale(' + scale + ')';
+  }
+
+  document.getElementById('prev').addEventListener('click', () => show(current - 1));
+  document.getElementById('next').addEventListener('click', () => show(current + 1));
+  window.addEventListener('keydown', (event) => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(event.key)) { event.preventDefault(); show(current + 1); }
+    if (['ArrowLeft', 'PageUp', 'Backspace'].includes(event.key)) { event.preventDefault(); show(current - 1); }
+    if (event.key === 'Home') { show(0); }
+    if (event.key === 'End') { show(slides.length - 1); }
+  });
+  window.addEventListener('resize', fit);
+  window.addEventListener('hashchange', () => show((parseInt(location.hash.slice(1), 10) || 1) - 1));
+
+  fit();
+  show((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>
