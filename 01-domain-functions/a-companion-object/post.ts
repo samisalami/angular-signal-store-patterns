@@ -1,4 +1,4 @@
-import { User } from '../users/user';
+import { User } from '../../shared/user';
 
 export type Post = {
   id: string;

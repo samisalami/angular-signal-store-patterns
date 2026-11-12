@@ -3,7 +3,7 @@ import { signalStoreFeature, withComputed, withState } from '@ngrx/signals';
 
 export type RequestStatus = 'idle' | 'pending' | 'fulfilled' | { error: string };
 
-type RequestStatusState = { requestStatus: RequestStatus };
+export type RequestStatusState = { requestStatus: RequestStatus };
 
 // Generic store feature: any store can plug it in to track one async request.
 export function withRequestStatus() {
@@ -21,7 +21,7 @@ export function withRequestStatus() {
 }
 
 // Partial state updaters: pure functions that describe a state change.
-// They are not methods on purpose -> see docs/02-store-features.md.
+// They are not methods on purpose -> see 02-store-organisation/README.md.
 export function setPending(): RequestStatusState {
   return { requestStatus: 'pending' };
 }

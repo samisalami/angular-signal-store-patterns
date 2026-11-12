@@ -1,7 +1,7 @@
 import { computed } from '@angular/core';
 import { signalStore, withComputed, withHooks } from '@ngrx/signals';
 import { withEntities } from '@ngrx/signals/entities';
-import { Post } from '../post';
+import { Post } from '../../01-domain-functions/a-companion-object/post';
 import { withPostLikes } from './with-post-likes';
 import { withPostLoading } from './with-post-loading';
 

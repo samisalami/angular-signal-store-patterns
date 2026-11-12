@@ -1,10 +1,10 @@
 import { computed, inject, Signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { SessionStore } from '../users/session.store';
-import { Post } from './post';
-import { PostsStore } from './store/posts.store';
+import { SessionStore } from '../../shared/session.store';
+import { Post } from '../../01-domain-functions/a-companion-object/post';
+import { PostsStore } from '../../02-store-organisation/c-store-features/posts.store';
 
-// Inject function: the Angular counterpart of a Vue composable or a React hook.
+// Option D: an inject function, the Angular counterpart of a Vue composable or a React hook.
 // It answers "what does a component need to show and act on ONE post for the signed-in user?"
 // by combining two stores, the router and the Post domain rules. Components stay dumb.
 //

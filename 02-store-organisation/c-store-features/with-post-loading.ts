@@ -7,9 +7,9 @@ import {
   setFulfilled,
   setPending,
   withRequestStatus,
-} from '../../shared/store-features/with-request-status';
-import { Post } from '../post';
-import { PostsApi } from '../posts-api';
+} from '../../shared/with-request-status';
+import { Post } from '../../01-domain-functions/a-companion-object/post';
+import { PostsApi } from '../../shared/posts-api';
 
 // Domain store feature: loading posts.
 // The `type<>()` input is the contract -> it only plugs into a store that already holds Post entities.

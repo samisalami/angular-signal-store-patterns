@@ -4,72 +4,60 @@ Where does the functional code around an NgRx Signal Store go, if not into the s
 
 Vue has composables, React has hooks. Angular with NgRx Signal Store splits the same idea into three layers. Which layer a piece of code belongs in depends on what it needs:
 
-| The code needs… | Pattern | Lives in | Vue / React analogue |
-|---|---|---|---|
-| nothing but your data | [Domain functions](docs/01-domain-functions.md) | next to the type: `post.ts` | a plain TS module |
-| store state, methods or lifecycle | [Store features](docs/02-store-features.md) (`withX()`) | next to the store: `store/with-post-likes.ts` | a composable used inside a store |
-| DI, used by components | [Inject functions](docs/03-inject-functions.md) (`injectX()`) | next to the domain: `inject-post.ts` | a composable / hook |
-
-The store file itself only composes these pieces, so it stays short:
-
-```ts
-export const PostsStore = signalStore(
-  { providedIn: 'root' },
-  withEntities<Post>(),
-  withPostLoading(),
-  withPostLikes(),
-  withComputed(({ entities }) => ({
-    publishedPosts: computed(() => entities().filter((post) => !Post.isDraft(post))),
-    drafts: computed(() => entities().filter((post) => Post.isDraft(post))),
-  })),
-  withHooks({
-    onInit(store) {
-      void store.loadAll();
-    },
-  }),
-);
-```
+| The code needs… | Pattern | Vue / React analogue |
+|---|---|---|
+| nothing but your data | [Domain functions](01-domain-functions/) | a plain TS module |
+| store state, methods or lifecycle | [Store features](02-store-organisation/) (`withX()`) | a composable used inside a store |
+| DI, used by components | [Inject functions](03-component-access/) (`injectX()`) | a composable / hook |
 
 "Helpers" stays reserved for code that knows nothing about your domain: strings, arrays, dates.
+
+## Options, side by side
+
+Each chapter shows every option as real code in its own folder, all solving the same problem, so you can compare them directly. The chapter README explains the trade-offs.
+
+| Chapter | Options | Recommended |
+|---|---|---|
+| [1. Domain functions](01-domain-functions/) | A companion object · B module namespace | A or B |
+| [2. Store organisation](02-store-organisation/) | A inline · B method factories · C store features · D features with callbacks | C, plus D for generic features |
+| [3. Component access](03-component-access/) | A logic in component · B view methods on store · C component service · D inject function | D |
+
+Later chapters build on the recommended option of earlier ones: chapter 2 uses the `Post` from `01-domain-functions/a-companion-object`, and chapter 3 uses the store from `02-store-organisation/c-store-features`.
 
 ## The example
 
 A small blog: **posts** that signed-in **users** can like, and that their authors (or admins) can edit.
 
 ```
-src/
-  users/
-    user.ts                        // User type + domain functions
-    session.store.ts               // who is signed in
-  posts/
-    post.ts                        // Post type + domain functions (isDraft, isEditableBy, toggleLike…)
-    post.spec.ts                   // plain unit tests, no TestBed
-    posts-api.ts                   // HTTP
-    store/
-      posts.store.ts               // composition only
-      with-post-loading.ts         // feature: load posts + request status
-      with-post-likes.ts           // feature: optimistic like with rollback
-    inject-post.ts                 // inject function: one post, from the viewer's point of view
-    post-card.component.ts         // consumes injectPost(), knows no store
-  shared/
-    store-features/
-      with-request-status.ts       // generic feature + partial state updaters
+01-domain-functions/
+  a-companion-object/        post.ts, post.spec.ts
+  b-module-namespace/        post.ts, post.spec.ts
+02-store-organisation/
+  a-inline-store/            posts.store.ts
+  b-method-factories/        posts.store.ts, create-load-all.ts, create-toggle-like.ts, posts-store-internals.ts
+  c-store-features/          posts.store.ts, with-post-loading.ts, with-post-likes.ts
+  d-feature-callbacks/       posts.store.ts, with-auto-refresh.ts
+03-component-access/
+  a-logic-in-component/      post-card.component.ts
+  b-store-view-methods/      posts.store.ts, post-card.component.ts
+  c-component-service/       post-view.service.ts, post-card.component.ts
+  d-inject-function/         inject-post.ts, post-card.component.ts
+shared/                      user.ts, session.store.ts, posts-api.ts, with-request-status.ts
 ```
 
-## Choosing a layer
+## Why is there a package.json?
 
-1. **Can it be written without importing anything from `@angular` or `@ngrx`?** -> domain function. Most of the logic should land here, and it is the cheapest code to test.
-2. **Does it read or change store state, or need store lifecycle?** -> store feature. Split one out when it is a cohesive slice (loading, likes, selection, pagination), not to move a two-line method into another file.
-3. **Does a component need to combine stores, router or other services into one view?** -> inject function.
+You don't need Node to read this repo. The code isn't an app to run, it's example code. The package only exists to keep the examples honest:
 
-## Running
+- `npm run typecheck` compiles every option, including the discouraged ones, against the real Angular and NgRx APIs. A snippet that no longer matches the library fails here instead of misleading readers.
+- `npm test` runs the domain function specs.
 
 ```bash
 npm install
-npm test           # domain function tests (vitest)
-npm run typecheck  # tsc over all examples
+npm run typecheck
+npm test
 ```
 
 Needs npm 11 or newer: npm 10.9 crashes on `npm install` here with `Cannot read properties of null (reading 'edgesOut')`. On an older npm, run `npx npm@11 install` instead.
 
-Targets Angular 21 and `@ngrx/signals` 21. `withFeature` (used in the store features doc) needs `@ngrx/signals` 20 or newer.
+Targets Angular 21 and `@ngrx/signals` 21. `withFeature` (chapter 2, option D) needs `@ngrx/signals` 20 or newer.

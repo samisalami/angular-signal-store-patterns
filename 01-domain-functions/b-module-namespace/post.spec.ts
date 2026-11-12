@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { User } from '../users/user';
-import { Post } from './post';
+import type { User } from '../../shared/user';
+// Namespace import -> call sites read the same as option A: Post.isDraft(post).
+// The type itself is now Post.Post.
+import * as Post from './post';
 
 const POST_ID = 'post-1';
 const AUTHOR_ID = 'user-author';
@@ -13,11 +15,11 @@ const POST_TITLE_LABEL = 'Signal stores without the sprawl';
 const POST_BODY_LABEL = 'Keep the store short, keep the logic close to the data.';
 const PUBLISHED_AT = '2026-11-01T09:00:00.000Z';
 
-describe('Post', () => {
+describe('Post (module namespace)', () => {
   let author: User;
   let reader: User;
   let admin: User;
-  let publishedPost: Post;
+  let publishedPost: Post.Post;
 
   beforeEach(() => {
     author = { id: AUTHOR_ID, name: AUTHOR_NAME_LABEL, role: 'member' };
@@ -35,7 +37,7 @@ describe('Post', () => {
 
   describe('isDraft', () => {
     it('should treat a post without a publish date as a draft', () => {
-      const draftPost: Post = { ...publishedPost, publishedAt: null };
+      const draftPost: Post.Post = { ...publishedPost, publishedAt: null };
 
       expect(Post.isDraft(draftPost)).toBe(true);
     });
@@ -68,7 +70,7 @@ describe('Post', () => {
     });
 
     it('should remove the user from likedBy when they already liked the post', () => {
-      const likedPost: Post = { ...publishedPost, likedBy: [READER_ID, ADMIN_ID] };
+      const likedPost: Post.Post = { ...publishedPost, likedBy: [READER_ID, ADMIN_ID] };
 
       const unlikedPost = Post.toggleLike(likedPost, reader);
 

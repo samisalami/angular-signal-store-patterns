@@ -2,9 +2,9 @@ import { inject } from '@angular/core';
 import { patchState, signalStoreFeature, type, withMethods } from '@ngrx/signals';
 import { EntityState, setEntity } from '@ngrx/signals/entities';
 import { firstValueFrom } from 'rxjs';
-import { User } from '../../users/user';
-import { Post } from '../post';
-import { PostsApi } from '../posts-api';
+import { User } from '../../shared/user';
+import { Post } from '../../01-domain-functions/a-companion-object/post';
+import { PostsApi } from '../../shared/posts-api';
 
 // Domain store feature: liking posts, optimistic with rollback.
 // The rule "what does liking do to a post" lives in Post.toggleLike; this feature only adds
