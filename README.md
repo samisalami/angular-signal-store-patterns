@@ -70,4 +70,6 @@ npm test           # domain function tests (vitest)
 npm run typecheck  # tsc over all examples
 ```
 
+Needs npm 11 or newer: npm 10.9 crashes on `npm install` here with `Cannot read properties of null (reading 'edgesOut')`. On an older npm, run `npx npm@11 install` instead.
+
 Targets Angular 21 and `@ngrx/signals` 21. `withFeature` (used in the store features doc) needs `@ngrx/signals` 20 or newer.
