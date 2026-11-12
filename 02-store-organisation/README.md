@@ -196,7 +196,7 @@ withReducer(
   on(postsViewEvents.opened, postsViewEvents.retryClicked, () => setPending()),
   on(postsApiEvents.loaded, ({ payload: posts }) => [setAllEntities(posts), setFulfilled()]),
   on(postsApiEvents.loadFailed, ({ payload: error }) => setError(error)),
-  // Liking and taking a rejected like back are the same transition: toggle it.
+  // Liking and taking a rejected like back are the same update: toggle it.
   on(postsViewEvents.likeToggled, postsApiEvents.likeRejected, ({ payload }, state) => {
     const post = state.entityMap[payload.postId];
     return post ? setEntity(Post.toggleLike(post, payload.user)) : {};
@@ -321,7 +321,7 @@ store.setFulfilled();
 
 Why the exported functions are better:
 
-1. **They compose into one state change.** One `patchState` with two updaters is one transition. With methods it is two: between them the posts are loaded but the status still says `pending`. `watchState` and the Redux DevTools see that half-finished state as its own step.
+1. **They compose into one state change.** One `patchState` with two updaters is one change. With methods it is two: between them the posts are loaded but the status still says `pending`. `watchState` and the Redux DevTools see that half-finished state as its own step.
 2. **They don't become public store API.** Every method is callable by whoever injects the store, so any component could call `postsStore.setError('nope')`. Updaters only work through `patchState`, and with `protectedState` (on by default) only the store itself can patch its state. A private `_setPending` method would hide it as well, but it still wouldn't compose (point 1).
 3. **They work in every store with the feature.** `setPending()` describes a change to the `requestStatus` slice, not to one particular store. NgRx's entities work the same way: `withEntities()` is the feature, and `setAllEntities`, `setEntity` and `updateEntity` are exported updaters.
 4. **They are pure.** Data in, partial state out. Testable without a store.
@@ -331,7 +331,7 @@ They live outside the `signalStore(...)` call because they are not part of a sto
 ### Rule of thumb
 
 - **Methods** are what callers can ask the store to do: `loadAll()`, `toggleLike(postId, user)`. They change state or talk to the server.
-- **Updaters** are how the state changes: `setPending()`, `setEntity(post)`. Pure transitions of the *state*, used inside methods.
-- **Domain functions** are what the data means: `Post.toggleLike(post, user)`. Pure transitions of the *entity*, used inside methods.
+- **Updaters** are how the state changes: `setPending()`, `setEntity(post)`. Pure changes to the *state*, used inside methods.
+- **Domain functions** are what the data means: `Post.toggleLike(post, user)`. Pure updates of the *entity*, used inside methods.
 
 `withPostLikes` shows all three together. `Post.toggleLike` decides the new post, `setEntity` turns it into a state change, and the method adds the optimistic update and the server call.

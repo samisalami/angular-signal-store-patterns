@@ -28,7 +28,7 @@ export const Post = {
     return post.likedBy.includes(user.id);
   },
 
-  // --- Transitions: return the post after something happened to it. ---
+  // --- Updates: return the post after something happened to it. ---
   // Only stores call these, because only a store may save the result.
 
   toggleLike(post: Post, user: User): Post {

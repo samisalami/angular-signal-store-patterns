@@ -28,7 +28,7 @@ export function isLikedBy(post: Post, user: User): boolean {
   return post.likedBy.includes(user.id);
 }
 
-// --- Transitions: return the post after something happened to it. ---
+// --- Updates: return the post after something happened to it. ---
 // Only stores call these, because only a store may save the result.
 
 export function toggleLike(post: Post, user: User): Post {

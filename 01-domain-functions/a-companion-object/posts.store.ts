@@ -17,7 +17,7 @@ export const PostsStore = signalStore(
       patchState(store, setAllEntities(posts));
     },
 
-    // a transition inside a method -> the domain function decides WHAT the new post is,
+    // an update inside a method -> the domain function decides WHAT the new post is,
     // the store decides THAT it is saved
     toggleLike(postId: string, user: User): void {
       const post = store.entityMap()[postId];

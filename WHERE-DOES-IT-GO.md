@@ -32,13 +32,13 @@ Most real features are split by these questions into several pieces. "Like a pos
 
 ## Who may call what
 
-| | Domain queries | Domain transitions | Store signals | Store methods | Router, dialogs, toasts |
+| | Domain queries | Domain updates | Store signals | Store methods | Router, dialogs, toasts |
 |---|---|---|---|---|---|
 | **Store / store feature** | yes | yes | its own | its own | **no** |
 | **Inject function** | yes | **no** | yes | yes | yes |
 | **Component** | yes, in a view-specific `computed` | **no** | yes | yes | yes |
 
-A *query* answers a question (`Post.isDraft`). A *transition* returns the changed object (`Post.toggleLike`). Only a store may call a transition, because only a store can save the result. A component that calls one has either thrown the result away or is about to change state behind the store's back.
+A *query* answers a question (`Post.isDraft`). An *update* returns the changed object (`Post.toggleLike`). Only a store may call an update, because only a store can save the result. A component that calls one has either thrown the result away or is about to change state behind the store's back.
 
 ## Rules for signatures and names
 
@@ -68,7 +68,7 @@ These are checkable in review without knowing the feature.
 **Domain functions**
 
 - Take the object first: `Post.isLikedBy(post, user)`.
-- Queries start with `is`, `has`, `can`, or name what they return. Transitions are verbs and return the type they received.
+- Queries start with `is`, `has`, `can`, or name what they return. Updates are verbs and return the type they received.
 
 ## What is one concern?
 
@@ -94,7 +94,7 @@ Two tests, for store features and inject functions alike.
 | A store imports `Router`, opens a dialog or shows a toast | An inject function |
 | A store method reads `SessionStore` to find out who is acting | Pass the actor in as an argument |
 | A store method or computed named `...ForViewer`, `...ForCard`, `selected...` | View side (question 4) |
-| A component calls `patchState`, an API service, or a domain transition | A store method |
+| A component calls `patchState`, an API service, or a domain update | A store method |
 | The same `computed` in two components | An inject function if it needs context, a store computed if it doesn't |
 | Two components inject the same two stores and combine them the same way | An inject function |
 | An inject function named after a component, or one that every view only uses part of | Split by concern |
@@ -117,4 +117,4 @@ npm run lint
 
 One folder is exempt on purpose: [`03-component-access/b-store-view-methods`](03-component-access/b-store-view-methods/) puts view logic into the store, so its store imports `Router`. That is exactly what the rule exists to stop.
 
-What lint can't see (a component calling a domain transition, a store method that is really view logic, a badly cut concern) is what the names, the tests and the red flag table are for.
+What lint can't see (a component calling a domain update, a store method that is really view logic, a badly cut concern) is what the names, the tests and the red flag table are for.

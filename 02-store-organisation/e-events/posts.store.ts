@@ -26,7 +26,7 @@ export const PostsStore = signalStore(
     on(postsViewEvents.opened, postsViewEvents.retryClicked, () => setPending()),
     on(postsApiEvents.loaded, ({ payload: posts }) => [setAllEntities(posts), setFulfilled()]),
     on(postsApiEvents.loadFailed, ({ payload: error }) => setError(error)),
-    // Liking and taking a rejected like back are the same transition: toggle it.
+    // Liking and taking a rejected like back are the same update: toggle it.
     on(postsViewEvents.likeToggled, postsApiEvents.likeRejected, ({ payload }, state) => {
       const post = state.entityMap[payload.postId];
       return post ? setEntity(Post.toggleLike(post, payload.user)) : {};

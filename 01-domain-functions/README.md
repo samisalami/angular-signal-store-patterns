@@ -10,7 +10,7 @@ Rules for all options:
 - Never mutate. Return a new object.
 - There are two kinds:
   - **Queries** answer a question: `isDraft`, `isEditableBy`, `isLikedBy`.
-  - **Transitions** return the object after something happened to it: `toggleLike`.
+  - **Updates** return the object after something happened to it: `toggleLike`.
 
 Each option folder has the type with its functions (`post.ts`), a spec (`post.spec.ts`) and a minimal store that uses them (`posts.store.ts`).
 
@@ -115,7 +115,7 @@ Options A and B have none of these problems, because the data is plain and the f
 
 ### In a store
 
-A store uses **queries inside computeds** and **transitions inside methods**. From [`a-companion-object/posts.store.ts`](a-companion-object/posts.store.ts):
+A store uses **queries inside computeds** and **updates inside methods**. From [`a-companion-object/posts.store.ts`](a-companion-object/posts.store.ts):
 
 ```ts
 export const PostsStore = signalStore(
@@ -129,7 +129,7 @@ export const PostsStore = signalStore(
       patchState(store, setAllEntities(posts));
     },
 
-    // a transition inside a method -> the domain function decides WHAT the new post is,
+    // an update inside a method -> the domain function decides WHAT the new post is,
     // the store decides THAT it is saved
     toggleLike(postId: string, user: User): void {
       const post = store.entityMap()[postId];
@@ -166,12 +166,12 @@ The label text is presentation and belongs to the component. What makes a post a
 
 Two things a component never does:
 
-- **Call a transition.** `Post.toggleLike(post, user)` returns a new post, and a component has nowhere to put it. Changes go through a store method.
+- **Call an update.** `Post.toggleLike(post, user)` returns a new post, and a component has nowhere to put it. Changes go through a store method.
 - **Combine a query with another store.** As soon as a component injects `SessionStore` to feed a query, that is view context several views will need -> an inject function.
 
 ### Summary
 
-| Caller | Queries | Transitions | Typical use |
+| Caller | Queries | Updates | Typical use |
 |---|---|---|---|
 | Store computed | yes | no | `drafts`, `publishedPosts` |
 | Store method | yes | **yes** | `toggleLike` saves `Post.toggleLike(…)` |

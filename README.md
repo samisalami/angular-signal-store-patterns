@@ -30,7 +30,7 @@ flowchart LR
   Component -- "takes shared concerns from" --> Inject
   Inject -- "reads signals, calls methods with the actor" --> Store
   Inject -- "queries" --> Domain
-  Store -- "queries and transitions" --> Domain
+  Store -- "queries and updates" --> Domain
   Store --> Api
 ```
 

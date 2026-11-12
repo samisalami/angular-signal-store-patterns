@@ -22,7 +22,7 @@ export function withPostLoading() {
         patchState(store, setPending());
         try {
           const posts = await firstValueFrom(postsApi.fetchAll());
-          // two updaters, one state transition
+          // two updaters, one state change
           patchState(store, setAllEntities(posts), setFulfilled());
         } catch (error) {
           patchState(store, setError(String(error)));
