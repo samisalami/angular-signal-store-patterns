@@ -8,25 +8,23 @@ import { SessionStore } from '../../shared/session.store';
 // It covers ONE concern: liking a post as the signed-in user. Every view with a like
 // button uses it, whatever else that view shows.
 //
+// What it adds on top of the store and the domain functions is context:
+//   Post.isLikedBy(post, user)       + "the user is whoever is signed in"  -> isLiked
+//   postsStore.toggleLike(id, user)  + the same, + "or go and sign in"     -> toggleLike()
+//
 // Must be called in an injection context (field initializer or constructor).
-export function injectPostLike(postId: Signal<string>) {
+export function injectPostLike(post: Signal<Post>) {
   const postsStore = inject(PostsStore);
   const sessionStore = inject(SessionStore);
   const router = inject(Router);
 
-  const post = computed<Post | undefined>(() => postsStore.entityMap()[postId()]);
-
   const isLiked = computed(() => {
-    const currentPost = post();
     const viewer = sessionStore.currentUser();
-    return currentPost !== undefined && viewer !== null && Post.isLikedBy(currentPost, viewer);
+    return viewer !== null && Post.isLikedBy(post(), viewer);
   });
-
-  const likeCount = computed(() => post()?.likedBy.length ?? 0);
 
   return {
     isLiked,
-    likeCount,
 
     toggleLike(): void {
       const viewer = sessionStore.currentUser();
@@ -35,7 +33,7 @@ export function injectPostLike(postId: Signal<string>) {
         void router.navigate(['/sign-in']);
         return;
       }
-      void postsStore.toggleLike(postId(), viewer);
+      void postsStore.toggleLike(post().id, viewer);
     },
   };
 }

@@ -5,50 +5,42 @@ import { PostsStore } from '../../02-store-organisation/c-store-features/posts.s
 import { SessionStore } from '../../shared/session.store';
 
 // Option A: the component does it all.
-// Fine for one component. The post detail page and the post list row need the same
+// Fine for one component. The feed row and the moderation row need the same
 // isLiked / canEdit / toggleLike logic -> copy and paste, or a base class.
 @Component({
   selector: 'app-post-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (post(); as post) {
-      <article>
-        <h2>{{ post.title }}</h2>
-        <p>{{ post.body }}</p>
+    <article>
+      <h2>{{ post().title }}</h2>
+      <p>{{ post().body }}</p>
 
-        <button type="button" [attr.aria-pressed]="isLiked()" (click)="toggleLike()">
-          ♥ {{ likeCount() }}
-        </button>
+      <button type="button" [attr.aria-pressed]="isLiked()" (click)="toggleLike()">
+        ♥ {{ post().likedBy.length }}
+      </button>
 
-        @if (canEdit()) {
-          <button type="button" (click)="edit()">Edit</button>
-        }
-      </article>
-    }
+      @if (canEdit()) {
+        <button type="button" (click)="edit()">Edit</button>
+      }
+    </article>
   `,
 })
 export class PostCardComponent {
-  readonly postId = input.required<string>();
+  readonly post = input.required<Post>();
 
   private readonly postsStore = inject(PostsStore);
   private readonly sessionStore = inject(SessionStore);
   private readonly router = inject(Router);
 
-  protected readonly post = computed<Post | undefined>(() => this.postsStore.entityMap()[this.postId()]);
-
   protected readonly isLiked = computed(() => {
-    const currentPost = this.post();
     const viewer = this.sessionStore.currentUser();
-    return currentPost !== undefined && viewer !== null && Post.isLikedBy(currentPost, viewer);
+    return viewer !== null && Post.isLikedBy(this.post(), viewer);
   });
 
   protected readonly canEdit = computed(() => {
-    const currentPost = this.post();
     const viewer = this.sessionStore.currentUser();
-    return currentPost !== undefined && viewer !== null && Post.isEditableBy(currentPost, viewer);
+    return viewer !== null && Post.isEditableBy(this.post(), viewer);
   });
-
-  protected readonly likeCount = computed(() => this.post()?.likedBy.length ?? 0);
 
   protected toggleLike(): void {
     const viewer = this.sessionStore.currentUser();
@@ -56,10 +48,10 @@ export class PostCardComponent {
       void this.router.navigate(['/sign-in']);
       return;
     }
-    void this.postsStore.toggleLike(this.postId(), viewer);
+    void this.postsStore.toggleLike(this.post().id, viewer);
   }
 
   protected edit(): void {
-    void this.router.navigate(['/posts', this.postId(), 'edit']);
+    void this.router.navigate(['/posts', this.post().id, 'edit']);
   }
 }

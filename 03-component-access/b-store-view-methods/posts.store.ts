@@ -9,36 +9,34 @@ import { SessionStore } from '../../shared/session.store';
 
 // Option B: the store answers the view's questions itself.
 // PostsStore now depends on SessionStore and Router, and every screen that needs
-// "post X from the viewer's point of view" adds more methods here.
+// "a post from the viewer's point of view" adds more methods here.
 export const PostsStore = signalStore(
   { providedIn: 'root' },
   withEntities<Post>(),
   withPostLoading(),
   withPostLikes(),
   withMethods((store, sessionStore = inject(SessionStore), router = inject(Router)) => ({
-    isLikedByViewer(postId: string): boolean {
-      const post: Post | undefined = store.entityMap()[postId];
+    isLikedByViewer(post: Post): boolean {
       const viewer = sessionStore.currentUser();
-      return post !== undefined && viewer !== null && Post.isLikedBy(post, viewer);
+      return viewer !== null && Post.isLikedBy(post, viewer);
     },
 
-    canViewerEdit(postId: string): boolean {
-      const post: Post | undefined = store.entityMap()[postId];
+    canViewerEdit(post: Post): boolean {
       const viewer = sessionStore.currentUser();
-      return post !== undefined && viewer !== null && Post.isEditableBy(post, viewer);
+      return viewer !== null && Post.isEditableBy(post, viewer);
     },
 
-    toggleLikeAsViewer(postId: string): void {
+    toggleLikeAsViewer(post: Post): void {
       const viewer = sessionStore.currentUser();
       if (viewer === null) {
         void router.navigate(['/sign-in']);
         return;
       }
-      void store.toggleLike(postId, viewer);
+      void store.toggleLike(post.id, viewer);
     },
 
-    editPost(postId: string): void {
-      void router.navigate(['/posts', postId, 'edit']);
+    editPost(post: Post): void {
+      void router.navigate(['/posts', post.id, 'edit']);
     },
   })),
   withHooks({

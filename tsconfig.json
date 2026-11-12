@@ -13,6 +13,10 @@
     "isolatedModules": true,
     "noEmit": true
   },
+  "angularCompilerOptions": {
+    "strictTemplates": true,
+    "strictInjectionParameters": true
+  },
   "include": ["**/*.ts"],
   "exclude": ["node_modules"]
 }

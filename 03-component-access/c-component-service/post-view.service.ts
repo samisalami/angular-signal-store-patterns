@@ -5,59 +5,53 @@ import { PostsStore } from '../../02-store-organisation/c-store-features/posts.s
 import { SessionStore } from '../../shared/session.store';
 
 // Option C: a service provided per component (`providers: [PostViewService]`).
-// Same logic as the inject function in option D, plus the ceremony a class needs:
-// it can't see the component's input(), so the component has to connect() it.
+// Same logic as the inject functions in option D, plus the ceremony a class needs:
+// it can't see the component's input(), so the component has to connect() it,
+// and until then every member has to cope with "no post yet".
 @Injectable()
 export class PostViewService {
   private readonly postsStore = inject(PostsStore);
   private readonly sessionStore = inject(SessionStore);
   private readonly router = inject(Router);
 
-  private readonly postIdSource = signal<Signal<string> | undefined>(undefined);
-  private readonly postId = computed(() => this.postIdSource()?.());
-
-  readonly post = computed<Post | undefined>(() => {
-    const postId = this.postId();
-    return postId === undefined ? undefined : this.postsStore.entityMap()[postId];
-  });
+  private readonly postSource = signal<Signal<Post> | undefined>(undefined);
+  private readonly post = computed(() => this.postSource()?.());
 
   readonly isLiked = computed(() => {
-    const currentPost = this.post();
+    const post = this.post();
     const viewer = this.sessionStore.currentUser();
-    return currentPost !== undefined && viewer !== null && Post.isLikedBy(currentPost, viewer);
+    return post !== undefined && viewer !== null && Post.isLikedBy(post, viewer);
   });
 
   readonly canEdit = computed(() => {
-    const currentPost = this.post();
+    const post = this.post();
     const viewer = this.sessionStore.currentUser();
-    return currentPost !== undefined && viewer !== null && Post.isEditableBy(currentPost, viewer);
+    return post !== undefined && viewer !== null && Post.isEditableBy(post, viewer);
   });
 
-  readonly likeCount = computed(() => this.post()?.likedBy.length ?? 0);
-
-  connect(postId: Signal<string>): this {
-    this.postIdSource.set(postId);
+  connect(post: Signal<Post>): this {
+    this.postSource.set(post);
     return this;
   }
 
   toggleLike(): void {
-    const postId = this.postId();
+    const post = this.post();
     const viewer = this.sessionStore.currentUser();
-    if (postId === undefined) {
+    if (post === undefined) {
       return;
     }
     if (viewer === null) {
       void this.router.navigate(['/sign-in']);
       return;
     }
-    void this.postsStore.toggleLike(postId, viewer);
+    void this.postsStore.toggleLike(post.id, viewer);
   }
 
   edit(): void {
-    const postId = this.postId();
-    if (postId === undefined) {
+    const post = this.post();
+    if (post === undefined) {
       return;
     }
-    void this.router.navigate(['/posts', postId, 'edit']);
+    void this.router.navigate(['/posts', post.id, 'edit']);
   }
 }

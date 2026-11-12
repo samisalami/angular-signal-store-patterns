@@ -1,6 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { Post } from '../../01-domain-functions/a-companion-object/post';
-import { PostsStore } from '../../02-store-organisation/c-store-features/posts.store';
 import { injectPostPermissions } from './inject-post-permissions';
 
 // A row in the moderation table: title, draft flag and edit action, no liking
@@ -9,29 +8,22 @@ import { injectPostPermissions } from './inject-post-permissions';
   selector: 'app-moderation-row',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (post(); as post) {
-      <tr>
-        <td>{{ post.title }}</td>
-        <td>{{ isDraft() ? 'Draft' : 'Published' }}</td>
-        <td>
-          @if (permissions.canEdit()) {
-            <button type="button" (click)="permissions.edit()">Edit</button>
-          }
-        </td>
-      </tr>
-    }
+    <tr>
+      <td>{{ post().title }}</td>
+      <td>{{ statusLabel() }}</td>
+      <td>
+        @if (permissions.canEdit()) {
+          <button type="button" (click)="permissions.edit()">Edit</button>
+        }
+      </td>
+    </tr>
   `,
 })
 export class ModerationRowComponent {
-  readonly postId = input.required<string>();
+  readonly post = input.required<Post>();
 
-  private readonly postsStore = inject(PostsStore);
-
-  protected readonly post = computed<Post | undefined>(() => this.postsStore.entityMap()[this.postId()]);
-  // view-specific and trivial -> stays in the component, on top of a domain function
-  protected readonly isDraft = computed(() => {
-    const currentPost = this.post();
-    return currentPost !== undefined && Post.isDraft(currentPost);
-  });
-  protected readonly permissions = injectPostPermissions(this.postId);
+  // Only this view shows a status label, so the computed stays here.
+  // The rule itself (what makes a post a draft) still comes from the domain function.
+  protected readonly statusLabel = computed(() => (Post.isDraft(this.post()) ? 'Draft' : 'Published'));
+  protected readonly permissions = injectPostPermissions(this.post);
 }

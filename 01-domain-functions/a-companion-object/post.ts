@@ -12,8 +12,10 @@ export type Post = {
 };
 
 // Domain functions for Post: the behaviour of the data type itself.
-// No Angular, no store, no DI -> usable from stores, components, inject functions and tests alike.
+// No Angular, no store, no DI -> usable from stores, inject functions, components and tests alike.
 export const Post = {
+  // --- Queries: answer a question about a post. Safe to call from every layer. ---
+
   isDraft(post: Post): boolean {
     return post.publishedAt === null;
   },
@@ -25,6 +27,9 @@ export const Post = {
   isLikedBy(post: Post, user: User): boolean {
     return post.likedBy.includes(user.id);
   },
+
+  // --- Transitions: return the post after something happened to it. ---
+  // Only stores call these, because only a store may save the result.
 
   toggleLike(post: Post, user: User): Post {
     const likedBy = Post.isLikedBy(post, user)

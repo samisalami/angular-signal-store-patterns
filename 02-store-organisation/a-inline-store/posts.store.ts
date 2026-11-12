@@ -16,6 +16,7 @@ export const PostsStore = signalStore(
   withState<{ requestStatus: RequestStatus }>({ requestStatus: 'idle' }),
   withComputed(({ entities, requestStatus }) => ({
     isPending: computed(() => requestStatus() === 'pending'),
+    isFulfilled: computed(() => requestStatus() === 'fulfilled'),
     error: computed(() => {
       const status = requestStatus();
       return typeof status === 'object' ? status.error : null;
