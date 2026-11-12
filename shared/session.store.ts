@@ -2,7 +2,7 @@ import { computed } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { User } from './user';
 
-// Who is signed in. Deliberately tiny: it exists so injectPost() has a second store to combine.
+// Who is signed in. Deliberately tiny: it exists so the component access examples have a second store to combine.
 export const SessionStore = signalStore(
   { providedIn: 'root' },
   withState<{ currentUser: User | null }>({ currentUser: null }),

@@ -41,7 +41,8 @@ A small blog: **posts** that signed-in **users** can like, and that their author
   a-logic-in-component/      post-card.component.ts
   b-store-view-methods/      posts.store.ts, post-card.component.ts
   c-component-service/       post-view.service.ts, post-card.component.ts
-  d-inject-function/         inject-post.ts, post-card.component.ts
+  d-inject-function/         inject-post-like.ts, inject-post-permissions.ts,
+                             post-card.component.ts, post-list-row.component.ts, moderation-row.component.ts
 shared/                      user.ts, session.store.ts, posts-api.ts, with-request-status.ts
 ```
 

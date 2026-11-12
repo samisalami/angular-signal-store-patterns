@@ -1,23 +1,26 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { injectPost } from './inject-post';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { Post } from '../../01-domain-functions/a-companion-object/post';
+import { PostsStore } from '../../02-store-organisation/c-store-features/posts.store';
+import { injectPostLike } from './inject-post-like';
+import { injectPostPermissions } from './inject-post-permissions';
 
-// The component knows neither PostsStore, SessionStore nor Router.
-// It renders what injectPost() hands it and forwards clicks.
+// Shows the post, a like button and an edit button -> takes both concerns.
+// Reading the post itself is a plain store read, so it needs no inject function.
 @Component({
   selector: 'app-post-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (postView.post(); as post) {
+    @if (post(); as post) {
       <article>
         <h2>{{ post.title }}</h2>
         <p>{{ post.body }}</p>
 
-        <button type="button" [attr.aria-pressed]="postView.isLiked()" (click)="postView.toggleLike()">
-          ♥ {{ postView.likeCount() }}
+        <button type="button" [attr.aria-pressed]="like.isLiked()" (click)="like.toggleLike()">
+          ♥ {{ like.likeCount() }}
         </button>
 
-        @if (postView.canEdit()) {
-          <button type="button" (click)="postView.edit()">Edit</button>
+        @if (permissions.canEdit()) {
+          <button type="button" (click)="permissions.edit()">Edit</button>
         }
       </article>
     }
@@ -26,5 +29,9 @@ import { injectPost } from './inject-post';
 export class PostCardComponent {
   readonly postId = input.required<string>();
 
-  protected readonly postView = injectPost(this.postId);
+  private readonly postsStore = inject(PostsStore);
+
+  protected readonly post = computed<Post | undefined>(() => this.postsStore.entityMap()[this.postId()]);
+  protected readonly like = injectPostLike(this.postId);
+  protected readonly permissions = injectPostPermissions(this.postId);
 }

@@ -1,15 +1,15 @@
 import { computed, inject, Signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { SessionStore } from '../../shared/session.store';
 import { Post } from '../../01-domain-functions/a-companion-object/post';
 import { PostsStore } from '../../02-store-organisation/c-store-features/posts.store';
+import { SessionStore } from '../../shared/session.store';
 
 // Option D: an inject function, the Angular counterpart of a Vue composable or a React hook.
-// It answers "what does a component need to show and act on ONE post for the signed-in user?"
-// by combining two stores, the router and the Post domain rules. Components stay dumb.
+// It covers ONE concern: liking a post as the signed-in user. Every view with a like
+// button uses it, whatever else that view shows.
 //
 // Must be called in an injection context (field initializer or constructor).
-export function injectPost(postId: Signal<string>) {
+export function injectPostLike(postId: Signal<string>) {
   const postsStore = inject(PostsStore);
   const sessionStore = inject(SessionStore);
   const router = inject(Router);
@@ -22,18 +22,10 @@ export function injectPost(postId: Signal<string>) {
     return currentPost !== undefined && viewer !== null && Post.isLikedBy(currentPost, viewer);
   });
 
-  const canEdit = computed(() => {
-    const currentPost = post();
-    const viewer = sessionStore.currentUser();
-    return currentPost !== undefined && viewer !== null && Post.isEditableBy(currentPost, viewer);
-  });
-
   const likeCount = computed(() => post()?.likedBy.length ?? 0);
 
   return {
-    post,
     isLiked,
-    canEdit,
     likeCount,
 
     toggleLike(): void {
@@ -44,10 +36,6 @@ export function injectPost(postId: Signal<string>) {
         return;
       }
       void postsStore.toggleLike(postId(), viewer);
-    },
-
-    edit(): void {
-      void router.navigate(['/posts', postId(), 'edit']);
     },
   };
 }
