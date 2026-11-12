@@ -1,6 +1,6 @@
 # 2. Store organisation
 
-How to keep a store from growing into one long file. All four options build the same `PostsStore`. They differ only in where the code sits.
+How to keep a store from growing into one long file. Options A to D build the same `PostsStore` with the same methods. They differ only in where the code sits. Option E changes how the store is driven: events instead of methods.
 
 | Option | Folder | Verdict |
 |---|---|---|
@@ -8,11 +8,12 @@ How to keep a store from growing into one long file. All four options build the 
 | B: method factories | [`b-method-factories/`](b-method-factories/) | avoid |
 | C: store features | [`c-store-features/`](c-store-features/) | **recommended** |
 | D: features with callbacks | [`d-feature-callbacks/`](d-feature-callbacks/) | C plus `withFeature`, for generic features |
-| How the store is used | [`usage/`](usage/) | one component, and one spec that runs against all four |
+| E: events | [`e-events/`](e-events/) | when methods stop being enough: several stores or components react to the same thing |
+| How the store is used | [`usage/`](usage/) | one component, and one spec that runs against A to D |
 
 ## What is on the store
 
-This is the whole public API, identical in all four options:
+This is the whole public API, identical in options A to D:
 
 | Member | Kind | What it is |
 |---|---|---|
@@ -35,7 +36,7 @@ And what the computeds have in common: **no parameters**. `drafts()` is a fact a
 
 ## How the store is used
 
-A store is used through its signals and methods, nothing else. That is why all four options are interchangeable.
+A store is used through its signals and methods, nothing else. That is why options A to D are interchangeable.
 
 **From a component:** [`usage/posts-overview.component.ts`](usage/posts-overview.component.ts) injects the store, reads signals in the template and calls a method from a button:
 
@@ -64,7 +65,7 @@ export class PostsOverviewComponent {
 
 Nothing sits between the store and the template, because this view needs nothing the store doesn't already offer. This is the default. Chapter 3 is about the views where it isn't enough.
 
-**From a test:** [`usage/posts-store.spec.ts`](usage/posts-store.spec.ts) runs one suite against all four options with `describe.each`. It replaces `PostsApi` with a fake and then does what any consumer does:
+**From a test:** [`usage/posts-store.spec.ts`](usage/posts-store.spec.ts) runs one suite against options A to D with `describe.each`. It replaces `PostsApi` with a fake and then does what any consumer does:
 
 ```ts
 it('should take the like back when the server rejects it', async () => {
@@ -169,6 +170,130 @@ withFeature((store) => withAutoRefresh(() => void store.loadAll(), 60_000)),
 ```
 
 Use this for generic features (auto refresh, undo history, persistence) that should work in any store.
+
+## Option E: events, when methods stop being enough
+
+With methods, the caller tells the store what to do: `postsStore.toggleLike(postId, user)`. That works as long as each action has one place that reacts to it.
+
+It stops working when **several stores or components react to the same thing**. Say a rejected like has three consequences:
+
+1. the post goes back to how it was
+2. a notification appears
+3. the like button that was clicked shows "Could not save your like"
+
+With methods, whoever notices the failure has to call all three. `PostsStore` would need to know `NotificationsStore`, and there is no clean way for a store to reach one button. Every new consequence means editing the sender.
+
+The Events plugin (`@ngrx/signals/events`) turns it around. The sender only announces what happened, and everyone interested reacts on their own. It is still a `signalStore` with the same state and computeds. What changes is that the methods are replaced by three pieces:
+
+| Piece | What it is | In [`e-events/`](e-events/) |
+|---|---|---|
+| **Event** | a named fact with a payload | [`posts.events.ts`](e-events/posts.events.ts): `likeToggled`, `loaded`, `likeRejected`… |
+| **Reducer** (`withReducer`) | pure: event and state in, state change out | [`posts.store.ts`](e-events/posts.store.ts) |
+| **Event handler** (`withEventHandlers`) | side effects: hears an event, calls the server, answers with another event | [`posts.store.ts`](e-events/posts.store.ts) |
+
+```ts
+withReducer(
+  on(postsViewEvents.opened, postsViewEvents.retryClicked, () => setPending()),
+  on(postsApiEvents.loaded, ({ payload: posts }) => [setAllEntities(posts), setFulfilled()]),
+  on(postsApiEvents.loadFailed, ({ payload: error }) => setError(error)),
+  // Liking and taking a rejected like back are the same transition: toggle it.
+  on(postsViewEvents.likeToggled, postsApiEvents.likeRejected, ({ payload }, state) => {
+    const post = state.entityMap[payload.postId];
+    return post ? setEntity(Post.toggleLike(post, payload.user)) : {};
+  }),
+),
+```
+
+The domain function and the state updaters are the same ones options A to D use. Only the trigger is different.
+
+### Three reactions to one event
+
+`postsApiEvents.likeRejected` is dispatched once, by the event handler that talks to the server. Three places react, and none of them knows the others:
+
+| Who reacts | How | What it does |
+|---|---|---|
+| [`PostsStore`](e-events/posts.store.ts) | reducer | toggles the like back |
+| [`NotificationsStore`](e-events/notifications.store.ts) | reducer | adds "Your like could not be saved." |
+| [`PostLikeButtonComponent`](e-events/post-like-button.component.ts) | `inject(Events).on(…)` | shows a hint next to the button that was clicked |
+
+The second store is nothing but a reducer:
+
+```ts
+export const NotificationsStore = signalStore(
+  { providedIn: 'root' },
+  withState<{ messages: string[] }>({ messages: [] }),
+  withReducer(
+    on(postsApiEvents.loadFailed, ({ payload: error }, state) => ({
+      messages: [...state.messages, `Could not load posts: ${error}`],
+    })),
+    on(postsApiEvents.likeRejected, (_, state) => ({
+      messages: [...state.messages, 'Your like could not be saved.'],
+    })),
+  ),
+);
+```
+
+And a component can listen directly, for reactions that are not state. The hint belongs to one button for a moment, so no store should hold it:
+
+```ts
+constructor() {
+  inject(Events)
+    .on(postsApiEvents.likeRejected)
+    .pipe(
+      filter(({ payload }) => payload.postId === this.post().id),
+      takeUntilDestroyed(),
+    )
+    .subscribe(() => this.wasRejected.set(true));
+}
+```
+
+Every like button on the page runs this, each for its own post. Adding a fourth reaction (an analytics store, say) means adding one `on(…)` somewhere. Nothing that dispatches changes.
+
+### Using it from a view
+
+Reading is unchanged. Writing becomes dispatching ([`posts-overview.component.ts`](e-events/posts-overview.component.ts)):
+
+```ts
+export class PostsOverviewComponent {
+  protected readonly postsStore = inject(PostsStore);
+  protected readonly notificationsStore = inject(NotificationsStore);
+  protected readonly dispatch = injectDispatch(postsViewEvents);
+
+  constructor() {
+    this.dispatch.opened();
+  }
+}
+```
+
+```html
+<button type="button" (click)="dispatch.retryClicked()">Retry</button>
+```
+
+Events are named as facts in the past tense (`opened`, `retryClicked`, `likeToggled`), not as commands (`loadPosts`). The view doesn't decide that opening means loading. The store does.
+
+The other layers don't change. Domain functions fit even better, because `Post.toggleLike` goes straight into a reducer. In chapter 3, `injectPostLike` would call `dispatch.likeToggled({ postId, user })` instead of `postsStore.toggleLike(postId, user)`. Features still apply: a `withPostLikes()` feature would bundle the reducer case and the handler for liking.
+
+### What it costs
+
+- **More code and more jumping around.** One `toggleLike` method became two event definitions, a reducer case and a handler. Following a click means going from the dispatch to the events file to the reducer to the handler.
+- **RxJS is back.** Options A to D use `async`/`await`. Event handlers are observables, and you need to pick the right operator (`exhaustMap`, `mergeMap`).
+- **No return value.** `await postsStore.toggleLike(…)` tells the caller when it's done. A dispatched event tells the caller nothing. It has to watch state, or listen for the answering event.
+- **A store only hears events while it exists.** `NotificationsStore` is created the first time something injects it. Events dispatched before that are gone.
+- **Order matters in one place.** Reducers run before event handlers. `saveLike$` relies on that to read the already toggled post.
+
+[`e-events/posts-store.spec.ts`](e-events/posts-store.spec.ts) covers the same behaviour as the shared spec for A to D, plus the second store's reactions.
+
+### When to switch
+
+Stay with methods (option C) by default. They are shorter, they can be followed with "go to definition", and callers can `await` them.
+
+Move a store to events when one of these is true:
+
+- **Several stores or components must react to the same thing**, and the sender would otherwise have to know all of them.
+- A reaction is needed in a place the sender can't reach, like one specific component instance.
+- You need a record of everything that happened, for debugging or auditing.
+
+It's a per-store decision. An app can have most stores on methods and one busy store on events.
 
 ## When to split a feature out
 

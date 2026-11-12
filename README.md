@@ -53,7 +53,7 @@ Each chapter shows every option as real code in its own folder, all solving the 
 | Chapter | Options | Recommended |
 |---|---|---|
 | [1. Domain functions](01-domain-functions/) | A companion object · B module namespace · C class | A (or B) |
-| [2. Store organisation](02-store-organisation/) | A inline · B method factories · C store features · D features with callbacks | C, plus D for generic features |
+| [2. Store organisation](02-store-organisation/) | A inline · B method factories · C store features · D features with callbacks · E events | C, plus D for generic features, and E when several stores or components react to the same thing |
 | [3. From store to view](03-component-access/) | A logic in component · B view methods on store · C component service · D inject functions · E presentational component | D for domain components, E for UI pieces |
 
 Later chapters build on the recommended option of earlier ones: chapter 2 uses the `Post` from `01-domain-functions/a-companion-object`, and chapter 3 uses the store from `02-store-organisation/c-store-features`.
@@ -72,7 +72,9 @@ A small blog: **posts** that signed-in **users** can like, and that their author
   b-method-factories/        posts.store.ts, create-load-all.ts, create-toggle-like.ts, posts-store-internals.ts
   c-store-features/          posts.store.ts, with-post-loading.ts, with-post-likes.ts
   d-feature-callbacks/       posts.store.ts, with-auto-refresh.ts
-  usage/                     posts-overview.component.ts, posts-store.spec.ts (runs against all four)
+  e-events/                  posts.events.ts, posts.store.ts (+ spec), notifications.store.ts,
+                             posts-overview.component.ts, post-like-button.component.ts
+  usage/                     posts-overview.component.ts, posts-store.spec.ts (runs against A to D)
 03-component-access/
   a-logic-in-component/      post-card.component.ts
   b-store-view-methods/      posts.store.ts, post-card.component.ts
@@ -88,7 +90,7 @@ shared/                      user.ts, session.store.ts, posts-api.ts, with-reque
 You don't need Node to read this repo. The code isn't an app to run, it's example code. The package only exists to keep the examples honest:
 
 - `npm run typecheck` compiles every option with the Angular compiler, templates included, against the real Angular and NgRx APIs. A snippet that no longer matches the library fails here instead of misleading readers.
-- `npm test` runs the specs: the domain functions, the store (one suite against all four ways of organising it) and an inject function.
+- `npm test` runs the specs: the domain functions, the store (one suite against the four method-based options, one for the event-based one) and an inject function.
 - `npm run lint` checks the import boundaries between the layers.
 
 ```bash

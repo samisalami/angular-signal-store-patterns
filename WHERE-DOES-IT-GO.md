@@ -20,6 +20,8 @@ For question 4, count the views that need it:
 
 Extract at the second use, not the first. Until a second view needs it, you don't know what the shared part is.
 
+In an event-driven store ([chapter 2, option E](02-store-organisation/#option-e-events-when-methods-stop-being-enough)), the answer to question 2 is a reducer case plus an event handler instead of a method. The questions stay the same.
+
 Most real features are split by these questions into several pieces. "Like a post" becomes:
 
 | Piece | Question | Where |
